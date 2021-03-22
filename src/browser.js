@@ -56,11 +56,27 @@ if (isBrowser) {
 
     // onMessage react native
     window.document.addEventListener('message', e => originalPostMessage && listener(JSON.parse(e.data)))
-    // onMessage react-native-webview 
+    // onMessage react-native-webview
     window.addEventListener('message', e => ReactNativeWebView && listener(JSON.parse(e.data)))
     // onMessage react-native-webview  with android
     window.document.addEventListener('message', e => ReactNativeWebView && listener(JSON.parse(e.data)));
-
+    // onMessage flutter_inappwebview
+    window.addEventListener('flutterInAppWebViewPlatformReady', function(e) {
+        // flutter_inappwebview
+        _postMessage = function(...args) {
+            let payload = args[0];
+            let data = JSON.parse(payload).data;
+            window.flutter_inappwebview.callHandler(data.type, JSON.stringify(data)).then((result) => {
+                data.data = result;
+                data.status = STATUS_SUCCESS;
+                listener(data);
+            }).catch((err) => {
+                data.data = err;
+                data.status = STATUS_FAIL;
+                listener(data);
+            });
+        }
+    });
 }
 
 export default {

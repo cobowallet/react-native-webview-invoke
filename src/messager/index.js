@@ -1,8 +1,8 @@
 import { createEventBus } from './event-bus'
 
-const SYNC_COMMAND = 'RNWV:sync'
-const STATUS_SUCCESS = 'success';
-const STATUS_FAIL = 'fail';
+export const SYNC_COMMAND = 'RNWV:sync'
+export const STATUS_SUCCESS = 'success';
+export const STATUS_FAIL = 'fail';
 let _count = 0
 
 class Deferred {
@@ -27,7 +27,7 @@ export function createMessager(sendHandler) {
     let needWait = []
     const eventBus = createEventBus()
     const transactions = {}
-    const callbacks = {} // 
+    const callbacks = {} //
     const fn = {} // all other side functions
 
     function isConnect() { return !needWait }
