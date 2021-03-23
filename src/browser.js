@@ -5,7 +5,16 @@ let _postMessage = null
 const isBrowser = typeof window !== 'undefined'
 
 const { bind, define, listener, ready, fn, addEventListener, removeEventListener, isConnect } = createMessager(
-    data => isBrowser && _postMessage && _postMessage(JSON.stringify(data))
+    function(data) {
+        if (isBrowser) {
+            if(_postMessage) {
+                _postMessage(JSON.stringify(data));
+            }
+            if(_postFlutterMessage) {
+                _postFlutterMessage(data);
+            }
+        }
+    }
 )
 
 if (isBrowser) {
@@ -54,19 +63,12 @@ if (isBrowser) {
         Object.defineProperty(window, 'ReactNativeWebView', descriptor)
     }
 
-    // onMessage react native
-    window.document.addEventListener('message', e => originalPostMessage && listener(JSON.parse(e.data)))
-    // onMessage react-native-webview
-    window.addEventListener('message', e => ReactNativeWebView && listener(JSON.parse(e.data)))
-    // onMessage react-native-webview  with android
-    window.document.addEventListener('message', e => ReactNativeWebView && listener(JSON.parse(e.data)));
-    // onMessage flutter_inappwebview
-    window.addEventListener('flutterInAppWebViewPlatformReady', function(e) {
-        // flutter_inappwebview
-        _postMessage = function(...args) {
-            let payload = args[0];
-            let data = JSON.parse(payload).data;
-            window.flutter_inappwebview.callHandler(data.type, JSON.stringify(data)).then((result) => {
+    // flutter_inappwebview
+    let flutter_inappwebview = window.flutter_inappwebview;
+
+    if (flutter_inappwebview) {
+        _postFlutterMessage = function(data) {
+            window.flutter_inappwebview.callHandler(data.data.type, JSON.stringify(data.data)).then((result) => {
                 data.data = result;
                 data.status = STATUS_SUCCESS;
                 listener(data);
@@ -76,6 +78,53 @@ if (isBrowser) {
                 listener(data);
             });
         }
+        ready();
+    } else {
+        const descriptor = {
+            get: function () {
+                return flutter_inappwebview;
+            },
+            set: function (value) {
+                flutter_inappwebview = value;
+                if (flutter_inappwebview) {
+                    _postFlutterMessage = function(data) {
+                        window.flutter_inappwebview.callHandler(data.data.type, JSON.stringify(data.data)).then((result) => {
+                            data.data = result;
+                            data.status = STATUS_SUCCESS;
+                            listener(data);
+                        }).catch((err) => {
+                            data.data = err;
+                            data.status = STATUS_FAIL;
+                            listener(data);
+                        });
+                    }
+                    setTimeout(ready, 50);
+                }
+            }
+        }
+        Object.defineProperty(window, 'flutter_inappwebview', descriptor);
+    }
+
+    // onMessage react native
+    window.document.addEventListener('message', e => originalPostMessage && listener(JSON.parse(e.data)))
+    // onMessage react-native-webview
+    window.addEventListener('message', e => ReactNativeWebView && listener(JSON.parse(e.data)))
+    // onMessage react-native-webview  with android
+    window.document.addEventListener('message', e => ReactNativeWebView && listener(JSON.parse(e.data)));
+    // flutter_inappwebview
+    window.addEventListener('flutterInAppWebViewPlatformReady', function(e) {
+        _postFlutterMessage = function(data) {
+            window.flutter_inappwebview.callHandler(data.data.type, JSON.stringify(data.data)).then((result) => {
+                data.data = result;
+                data.status = STATUS_SUCCESS;
+                listener(data);
+            }).catch((err) => {
+                data.data = err;
+                data.status = STATUS_FAIL;
+                listener(data);
+            });
+        }
+        ready();
     });
 }
 
