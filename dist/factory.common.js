@@ -168,7 +168,4 @@ function createMessager(sendHandler) {
     }
 }
 
-exports.STATUS_FAIL = STATUS_FAIL;
-exports.STATUS_SUCCESS = STATUS_SUCCESS;
-exports.SYNC_COMMAND = SYNC_COMMAND;
 exports.createMessager = createMessager;

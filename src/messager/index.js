@@ -1,8 +1,8 @@
 import { createEventBus } from './event-bus'
 
-export const SYNC_COMMAND = 'RNWV:sync'
-export const STATUS_SUCCESS = 'success';
-export const STATUS_FAIL = 'fail';
+const SYNC_COMMAND = 'RNWV:sync'
+const STATUS_SUCCESS = 'success';
+const STATUS_FAIL = 'fail';
 let _count = 0
 
 class Deferred {

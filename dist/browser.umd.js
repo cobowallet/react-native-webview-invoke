@@ -39,8 +39,8 @@
     }
 
     const SYNC_COMMAND = 'RNWV:sync';
-    const STATUS_SUCCESS$1 = 'success';
-    const STATUS_FAIL$1 = 'fail';
+    const STATUS_SUCCESS = 'success';
+    const STATUS_FAIL = 'fail';
     let _count = 0;
 
     class Deferred {
@@ -58,7 +58,7 @@
         id: _count++,
         command, data,
         reply: false,
-        status: STATUS_SUCCESS$1
+        status: STATUS_SUCCESS
     });
 
     function createMessager(sendHandler) {
@@ -121,7 +121,7 @@
             if (data.reply) {
                 const key = getTransactionKey(data);
                 if (transactions[key]) {
-                    if (data.status === STATUS_FAIL$1) {
+                    if (data.status === STATUS_FAIL) {
                         transactions[key].reject(data.data);
                     } else {
                         transactions[key].resolve(data.data);
@@ -132,13 +132,13 @@
                     const result = callbacks[data.command](data.data);
                     if (result && result.then) {
                         result
-                            .then(d => reply(data, d, STATUS_SUCCESS$1))
-                            .catch(e => reply(data, e, STATUS_FAIL$1));
+                            .then(d => reply(data, d, STATUS_SUCCESS))
+                            .catch(e => reply(data, e, STATUS_FAIL));
                     } else {
-                        reply(data, result, STATUS_SUCCESS$1);
+                        reply(data, result, STATUS_SUCCESS);
                     }
                 } else {
-                    reply(data, `function ${data.command} is not defined`, STATUS_FAIL$1);
+                    reply(data, `function ${data.command} is not defined`, STATUS_FAIL);
                 }
             }
             eventBus.emitEvent('receive', data);
@@ -172,7 +172,6 @@
 
     let _postMessage = null;
     let _postFlutterMessage = null;
-    let _flutterReady = false;
 
     const isBrowser = typeof window !== 'undefined';
 
@@ -235,54 +234,6 @@
             Object.defineProperty(window, 'ReactNativeWebView', descriptor);
         }
 
-        // flutter_inappwebview
-        let flutter_inappwebview = window.flutter_inappwebview;
-
-        if (flutter_inappwebview) {
-            _postFlutterMessage = function(data) {
-                if(!_flutterReady) {
-                    return;
-                }
-                window.flutter_inappwebview.callHandler(data.data.type, JSON.stringify(data.data)).then((result) => {
-                    data.data = result;
-                    data.status = STATUS_SUCCESS;
-                    listener(data);
-                }).catch((err) => {
-                    data.data = err;
-                    data.status = STATUS_FAIL;
-                    listener(data);
-                });
-            };
-            ready();
-        } else {
-            const descriptor = {
-                get: function () {
-                    return flutter_inappwebview;
-                },
-                set: function (value) {
-                    flutter_inappwebview = value;
-                    if (flutter_inappwebview) {
-                        _postFlutterMessage = function(data) {
-                            if(!_flutterReady) {
-                                return;
-                            }
-                            window.flutter_inappwebview.callHandler(data.data.type, JSON.stringify(data.data)).then((result) => {
-                                data.data = result;
-                                data.status = STATUS_SUCCESS;
-                                listener(data);
-                            }).catch((err) => {
-                                data.data = err;
-                                data.status = STATUS_FAIL;
-                                listener(data);
-                            });
-                        };
-                        setTimeout(ready, 50);
-                    }
-                }
-            };
-            Object.defineProperty(window, 'flutter_inappwebview', descriptor);
-        }
-
         // onMessage react native
         window.document.addEventListener('message', e => originalPostMessage && listener(JSON.parse(e.data)));
         // onMessage react-native-webview
@@ -291,21 +242,28 @@
         window.document.addEventListener('message', e => ReactNativeWebView && listener(JSON.parse(e.data)));
         // flutter_inappwebview
         window.addEventListener('flutterInAppWebViewPlatformReady', function(e) {
-            _flutterReady = true;
             if(!_postFlutterMessage) {
                 _postFlutterMessage = function(data) {
-                    if(!_flutterReady) {
-                        return;
+                    if (!!data.data  &&
+                        Object.prototype.toString.call(data.data)=='[object Array]' &&
+                        typeof data.data[0] === 'object' &&
+                        Object.prototype.hasOwnProperty.call(data.data[0], 'type')
+                    ) {
+                        let handlerName = data.data[0].type;
+                        let params = JSON.stringify(data.data[0]);
+                        data.reply = true;
+                        window.flutter_inappwebview.callHandler(handlerName, params).then((result) => {
+                            data.data = !!result ? result : '';
+                            data.status = 'success';
+                            listener(data);
+                        }).catch((err) => {
+                            data.data = '';
+                            data.status = 'fail';
+                            listener(data);
+                        });
+                    } else {
+                        listener(data);
                     }
-                    window.flutter_inappwebview.callHandler(data.data.type, JSON.stringify(data.data)).then((result) => {
-                        data.data = result;
-                        data.status = STATUS_SUCCESS;
-                        listener(data);
-                    }).catch((err) => {
-                        data.data = err;
-                        data.status = STATUS_FAIL;
-                        listener(data);
-                    });
                 };
                 ready();
             }
