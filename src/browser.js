@@ -1,6 +1,8 @@
 import { createMessager } from './messager/index'
 
-let _postMessage = null
+let _postMessage = null;
+let _postFlutterMessage = null;
+let _flutterReady = false;
 
 const isBrowser = typeof window !== 'undefined'
 
@@ -68,6 +70,9 @@ if (isBrowser) {
 
     if (flutter_inappwebview) {
         _postFlutterMessage = function(data) {
+            if(!_flutterReady) {
+                return;
+            }
             window.flutter_inappwebview.callHandler(data.data.type, JSON.stringify(data.data)).then((result) => {
                 data.data = result;
                 data.status = STATUS_SUCCESS;
@@ -88,6 +93,9 @@ if (isBrowser) {
                 flutter_inappwebview = value;
                 if (flutter_inappwebview) {
                     _postFlutterMessage = function(data) {
+                        if(!_flutterReady) {
+                            return;
+                        }
                         window.flutter_inappwebview.callHandler(data.data.type, JSON.stringify(data.data)).then((result) => {
                             data.data = result;
                             data.status = STATUS_SUCCESS;
@@ -113,18 +121,24 @@ if (isBrowser) {
     window.document.addEventListener('message', e => ReactNativeWebView && listener(JSON.parse(e.data)));
     // flutter_inappwebview
     window.addEventListener('flutterInAppWebViewPlatformReady', function(e) {
-        _postFlutterMessage = function(data) {
-            window.flutter_inappwebview.callHandler(data.data.type, JSON.stringify(data.data)).then((result) => {
-                data.data = result;
-                data.status = STATUS_SUCCESS;
-                listener(data);
-            }).catch((err) => {
-                data.data = err;
-                data.status = STATUS_FAIL;
-                listener(data);
-            });
+        _flutterReady = true;
+        if(!_postFlutterMessage) {
+            _postFlutterMessage = function(data) {
+                if(!_flutterReady) {
+                    return;
+                }
+                window.flutter_inappwebview.callHandler(data.data.type, JSON.stringify(data.data)).then((result) => {
+                    data.data = result;
+                    data.status = STATUS_SUCCESS;
+                    listener(data);
+                }).catch((err) => {
+                    data.data = err;
+                    data.status = STATUS_FAIL;
+                    listener(data);
+                });
+            }
+            ready();
         }
-        ready();
     });
 }
 

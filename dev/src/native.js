@@ -59,7 +59,7 @@ function createMessager(sendHandler) {
     let needWait = [];
     const eventBus = createEventBus();
     const transactions = {};
-    const callbacks = {}; // 
+    const callbacks = {}; //
     const fn = {}; // all other side functions
 
     function isConnect() { return !needWait }

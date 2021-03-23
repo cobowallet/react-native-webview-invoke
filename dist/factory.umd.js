@@ -2,7 +2,7 @@
     typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
     typeof define === 'function' && define.amd ? define(['exports'], factory) :
     (global = global || self, factory(global.WebViewCreateInvoke = {}));
-}(this, function (exports) { 'use strict';
+}(this, (function (exports) { 'use strict';
 
     function createEventBus() {
         const listeners = {
@@ -65,7 +65,7 @@
         let needWait = [];
         const eventBus = createEventBus();
         const transactions = {};
-        const callbacks = {}; // 
+        const callbacks = {}; //
         const fn = {}; // all other side functions
 
         function isConnect() { return !needWait }
@@ -170,8 +170,11 @@
         }
     }
 
+    exports.STATUS_FAIL = STATUS_FAIL;
+    exports.STATUS_SUCCESS = STATUS_SUCCESS;
+    exports.SYNC_COMMAND = SYNC_COMMAND;
     exports.createMessager = createMessager;
 
     Object.defineProperty(exports, '__esModule', { value: true });
 
-}));
+})));
